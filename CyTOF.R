@@ -46,3 +46,35 @@ getData <- function(data_frame,cell_type,disease_status,stimulant){
   df <- subset_rows_with_pattern(data_frame,stimulant_motif_pattern,"Name")
   return(df)
 }
+
+conditions <- c("healthy","disease")
+cells <- c("Basophils","CD16 Hi Monocytes","CD16 Low Monocytes","Lymphocytes")
+stimulants <- 1:8
+df_name <- cytof_data
+
+# extract data for different conditions
+for(condition in conditions){
+  for(cell in cells){
+    for(stimulant in stimulants){
+      assign( paste(condition,cell,stimulant,sep="_"), getData(df_name,cell,condition,stimulant) )     
+      # NOT WORKING for names with sapce
+    }
+  }
+}
+
+# function to extract cell count for each cell
+extract_cellcount <- function(data_frame){
+  return(as.numeric(data_frame[1,"X.Cells"]))
+}
+
+df_cellcounts <- data.frame(matrix(data=NA,nrow=4,ncol=2,dimnames=list(cells,conditions) ))
+df_celltypes["Basophils","Healthy"] <- extract_cellcount(healthy_Basophils_1)
+df_celltypes["Basophils","Disease"] <- extract_cellcount(disease_Basophils_1)
+# NOT WORKING
+df_celltypes["CD16 Hi Monocytes","Healthy"] <- extract_cellcount(healthy_CD16 Hi Monocytes_1) 
+df_celltypes["CD16 Hi Monocytes","Disease"] <- as.numeric(disease_HiMonocytes_unstimulated[1,"X.Cells"])
+df_celltypes["CD16 Low Monocytes","Healthy"] <- as.numeric(healthy_LowMonocytes_unstimulated[1,"X.Cells"])
+df_celltypes["CD16 Low Monocytes","Disease"] <- as.numeric(disease_LowMonocytes_unstimulated[1,"X.Cells"])
+df_celltypes["Lymphocytes","Healthy"] <- as.numeric(healthy_Lymphocytes_unstimulated[1,"X.Cells"])
+df_celltypes["Lymphocytes","Disease"] <- as.numeric(disease_Lymphocytes_unstimulated[1,"X.Cells"])
+df_celltypes
