@@ -56,25 +56,39 @@ df_name <- cytof_data
 for(condition in conditions){
   for(cell in cells){
     for(stimulant in stimulants){
-      assign( paste(condition,cell,stimulant,sep="_"), getData(df_name,cell,condition,stimulant) )     
-      # NOT WORKING for names with sapce
+      assign( make.names(paste(condition,cell,stimulant,sep="_")), getData(df_name,cell,condition,stimulant) ) 
     }
   }
 }
+
 
 # function to extract cell count for each cell
 extract_cellcount <- function(data_frame){
   return(as.numeric(data_frame[1,"X.Cells"]))
 }
 
-df_cellcounts <- data.frame(matrix(data=NA,nrow=4,ncol=2,dimnames=list(cells,conditions) ))
-df_celltypes["Basophils","Healthy"] <- extract_cellcount(healthy_Basophils_1)
-df_celltypes["Basophils","Disease"] <- extract_cellcount(disease_Basophils_1)
-# NOT WORKING
-df_celltypes["CD16 Hi Monocytes","Healthy"] <- extract_cellcount(healthy_CD16 Hi Monocytes_1) 
-df_celltypes["CD16 Hi Monocytes","Disease"] <- as.numeric(disease_HiMonocytes_unstimulated[1,"X.Cells"])
-df_celltypes["CD16 Low Monocytes","Healthy"] <- as.numeric(healthy_LowMonocytes_unstimulated[1,"X.Cells"])
-df_celltypes["CD16 Low Monocytes","Disease"] <- as.numeric(disease_LowMonocytes_unstimulated[1,"X.Cells"])
-df_celltypes["Lymphocytes","Healthy"] <- as.numeric(healthy_Lymphocytes_unstimulated[1,"X.Cells"])
-df_celltypes["Lymphocytes","Disease"] <- as.numeric(disease_Lymphocytes_unstimulated[1,"X.Cells"])
-df_celltypes
+# Compare cell count Healthy vs Disease in unstimulated condition
+cellcounts <- data.frame(matrix(data=NA,nrow=4,ncol=2,dimnames=list(make.names(cells),conditions) ))
+cellcounts["Basophils","healthy"] <- extract_cellcount(healthy_Basophils_1)
+cellcounts["Basophils","disease"] <- extract_cellcount(disease_Basophils_1)
+cellcounts["CD16.Hi.Monocytes","healthy"] <- extract_cellcount(healthy_CD16.Hi.Monocytes_1) 
+cellcounts["CD16.Hi.Monocytes","disease"] <- extract_cellcount(disease_CD16.Hi.Monocytes_1)
+cellcounts["CD16.Low.Monocytes","healthy"] <- extract_cellcount(healthy_CD16.Low.Monocytes_1) 
+cellcounts["CD16.Low.Monocytes","disease"] <- extract_cellcount(disease_CD16.Low.Monocytes_1)
+cellcounts["Lymphocytes","healthy"] <- extract_cellcount(healthy_Lymphocytes_1)
+cellcounts["Lymphocytes","disease"] <- extract_cellcount(disease_Lymphocytes_1)
+cellcounts
+
+# plot Change in Cell Count in Disease in Unstimulated condition
+par(mfrow=c(2,2))
+row_id <- 0
+apply(cellcounts,1,function(i) {
+  # "<<-" : search to made through parent environments for an existing definition of the variable being assigned.
+  (row_id <<- row_id+1); 
+  barplot((as.matrix(i)), ylab="cell count", main=rownames(cellcounts[row_id,]), names.arg=colnames(cellcounts), beside=TRUE, col=c("lightblue","brown"), space=c(0.2,0) )})
+
+
+# plot Change in Cell Count as log2 ratio
+logratio_cellcounts <- transform(cellcounts, logratio=log2(disease/healthy))
+par(mfrow=c(1,1))
+barplot(logratio_cellcounts$logratio, beside=T, col=2:5, legend.text=rownames(logratio_cellcounts), args.legend=list(x="bottomright"), ylab="Log2 Fold Change Disease VS Healthy")
