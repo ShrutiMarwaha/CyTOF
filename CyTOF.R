@@ -52,7 +52,6 @@ getData <- function(data_frame,cell_type,disease_status,stimulant){
 }
 
 ### data extraction for 4 different blood cells
-
 conditions <- c("healthy","disease")
 cells <- c("Basophils","CD16 Hi Monocytes","CD16 Low Monocytes","Lymphocytes")
 stimulants <- 1:8
@@ -110,6 +109,44 @@ for(condition in conditions){
               getData(df_name,cell_pattern,condition,stimulant) ) 
     }
   }
+}
+
+### data extraction for protein levels in various cell types, under different conditions conditions and stimulants.
+proteins <- c("pERK1/2","IkB","pAKT","p-P38","pSTAT3","pS6","pSTAT1","pSTAT5","pPLCg2")
+
+getProteinStimulantData <- function(data_frame,cell_type){
+  protein_stimulant_df <- data.frame(matrix(data=NA, ncol=5, dimnames= list(c(), c('cell_type', 'protein', 'stimulant', 'healthy', 'disease'))))
+  
+  healthy_list <- list()
+  for(stimulant in stimulants) 
+  {
+    healthy_list[[stimulant]] <- getData(data_frame,cell_type,"healthy",stimulant)
+  }
+  
+  disease_list <- list()
+  for(stimulant in stimulants) 
+  {
+    disease_list[[stimulant]] <- getData(data_frame,cell_type,"disease",stimulant)
+  }
+  
+  count <- 1 #row number for final dataframe
+  for(protein in proteins) 
+  {
+    for(stimulant in stimulants) 
+    {
+      healthy_stimulated <- as.numeric(subset(healthy_list[[stimulant]],Well.ID.==protein,Statistic))
+      disease_stimulated <- as.numeric(subset(disease_list[[stimulant]],Well.ID.==protein,Statistic))
+      
+      protein_stimulant_df[count,'cell_type'] = cell_type
+      protein_stimulant_df[count,'protein'] = protein
+      protein_stimulant_df[count,'stimulant'] = stimulant
+      protein_stimulant_df[count,'healthy'] = healthy_stimulated
+      protein_stimulant_df[count,'disease'] = disease_stimulated
+      
+      count <- count + 1
+    }
+  }
+  return(protein_stimulant_df) 
 }
 
 ######################### Exploratory Analysis #########################
@@ -174,3 +211,90 @@ barplot(logratio_lymphocytes_cellcounts$logratio, beside=T, col=1:nrow(logratio_
 logratio2_lymphocytes_cellcounts <- subset(logratio_lymphocytes_cellcounts,abs(logratio)>1)
 barplot(logratio2_lymphocytes_cellcounts$logratio, beside=T, col=1:nrow(logratio2_lymphocytes_cellcounts), ylab="Log2 Fold Change Disease VS Healthy",legend.text=rownames(logratio2_lymphocytes_cellcounts), args.legend=list(x="bottom", cex=0.7) )
 
+######## Change in Phosphorylated Proteins Levels in Disease
+
+# change in phosphorylated protein Levels in Disease, stimulator=1 implies unstimulated
+# TODO: rename the function in a better way
+proteinStimulantPlot <- function(data_frame,cell_type,stimulator,log=F){
+    # log True: implies if you want to plot healthy and disease sideways; False implies to plot log2 fold change in disease/healthy
+    df <- getProteinStimulantData(data_frame,cell_type)
+    df2 <- subset(df,stimulant==stimulator) 
+    df3 <- as.matrix( df2[,c("healthy","disease")] )
+    rownames(df3) <- df2$protein
+    
+    row_id <- 0
+
+    if(log==T)
+    {
+      logratio_df3 <- transform(df3, logratio=log2(disease/healthy))
+      par(mfrow=c(1,1))
+      apply(logratio_df3,1,function(i) 
+        {
+        # "<<-" : search to made through parent environments for an existing definition of the variable being assigned.
+        (row_id <<- row_id+1); 
+        barplot(logratio_df3$logratio, beside=T, col=2:9, legend.text=rownames(logratio_df3), 
+                args.legend=list(x="bottom", cex=0.9, box.col="white"), ylab="Log2 Fold Change Disease VS Healthy", 
+                main=c(cell_type,paste("stimulant:",stimulator)) )
+        })
+    }
+    
+    else
+    {
+      par(mfrow=c(2,2))
+      apply(df3,1,function(i) 
+      {
+        # "<<-" : search to made through parent environments for an existing definition of the variable being assigned.
+        (row_id <<- row_id+1); 
+        barplot((as.matrix(i)), ylab=rownames(df3)[row_id], main=c(cell_type,paste("stimulant:",stimulator)), 
+                names.arg=colnames(df3), beside=TRUE, col=c("lightblue","brown"), space=c(0.2,0) )
+      })
+    }
+    #return(df3)
+}
+
+# Change in Phosphorylated Proteins Levels in Disease: Basophils (Unstimulated)
+# sapply(cells[1:3], function(i) {proteinStimulantPlot(cytof_data,i,1,log=F)})
+sapply(cells[1:3], function(i) {proteinStimulantPlot(cytof_data,i,1,log=T)})
+
+# relative change in Phosphorylated Proteins Levels in Disease upon stimulation
+proteinDifferentStimulantsPlot <- function(data_frame,cell_type,log=F){
+    #protein_stimulation_ratios_df <- data.frame(matrix(data=NA, ncol=5, dimnames= list(c(), c('cell_type', 'protein', 'stimulant', 'stimulation_ratio_healthy', 'stimulation_ratio_disease'))))
+  
+    df <- getProteinStimulantData(data_frame,cell_type)
+    count <- 1
+    for(protein in proteins)
+    {
+      #print(protein)
+      healthy_unstimulated <- subset(df,stimulant==1,healthy)
+      disease_unstimulated <- subset(df,stimulant==1,disease)
+      
+      for(stimulator in stimulants[2:length(stimulants)])
+      {
+        healthy_stimulated <- subset(df,stimulant==stimulator,healthy)
+        disease_stimulated <- subset(df,stimulant==stimulator,disease)
+        
+        # difference in protein levels upon stimulation
+        healthy_diff = healthy_stimulated - healthy_unstimulated
+        disease_diff = disease_stimulated - disease_unstimulated
+        # relative change in protein levels upon stimulation
+        healthy_ratio = healthy_diff/healthy_unstimulated
+        disease_ratio = disease_diff/disease_unstimulated
+        
+        # protein_stimulation_ratios_df[count,'cell_type'] = cell_type
+        # protein_stimulation_ratios_df[count,'protein'] = protein
+        # protein_stimulation_ratios_df[count,'stimulant'] = stimulator
+        # protein_stimulation_ratios_df[count,'stimulation_ratio_healthy'] = healthy_ratio
+        # protein_stimulation_ratios_df[count,'stimulation_ratio_disease'] = disease_ratio
+        
+        count <- count + 1
+        print(protein,stimulator,count)
+      }
+    }
+    #return(protein_stimulation_ratios_df)
+}
+
+protein_stimulation_basophils <- proteinDifferentStimulantsPlot(cytof_data,'Basophils')
+x <- protein_stimulation_basophils
+x2 <- subset(x,protein=="pSTAT5")
+x3 <- as.matrix(x2[,c('stimulation_ratio_healthy','stimulation_ratio_disease')])
+rownames(x3) <- x2$stimulant
