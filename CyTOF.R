@@ -258,42 +258,49 @@ sapply(cells[1:3], function(i) {proteinStimulantPlot(cytof_data,i,1,log=T)})
 
 # relative change in Phosphorylated Proteins Levels in Disease upon stimulation
 proteinDifferentStimulantsPlot <- function(data_frame,cell_type,log=F){
-    #protein_stimulation_ratios_df <- data.frame(matrix(data=NA, ncol=5, dimnames= list(c(), c('cell_type', 'protein', 'stimulant', 'stimulation_ratio_healthy', 'stimulation_ratio_disease'))))
+    protein_stimulation_ratios_df <- data.frame(matrix(data=NA, ncol=5, dimnames= list(c(), c('cell_type', 'protein', 'stimulant', 'stimulation_ratio_healthy', 'stimulation_ratio_disease'))))
   
     df <- getProteinStimulantData(data_frame,cell_type)
     count <- 1
-    for(protein in proteins)
+    for(prot in proteins)
     {
-      #print(protein)
-      healthy_unstimulated <- subset(df,stimulant==1,healthy)
-      disease_unstimulated <- subset(df,stimulant==1,disease)
+      healthy_unstimulated <- subset(df,protein==prot & stimulant==1,healthy,drop=T)
+      disease_unstimulated <- subset(df,protein==prot & stimulant==1,disease,drop=T)
+      # print(healthy_unstimulated)
+      # print(disease_unstimulated)
       
       for(stimulator in stimulants[2:length(stimulants)])
       {
-        healthy_stimulated <- subset(df,stimulant==stimulator,healthy)
-        disease_stimulated <- subset(df,stimulant==stimulator,disease)
-        
+        healthy_stimulated <- subset(df,protein==prot & stimulant==stimulator,healthy,drop=T)
+        disease_stimulated <- subset(df,protein==prot & stimulant==stimulator,disease,drop=T)
+
         # difference in protein levels upon stimulation
         healthy_diff = healthy_stimulated - healthy_unstimulated
         disease_diff = disease_stimulated - disease_unstimulated
         # relative change in protein levels upon stimulation
         healthy_ratio = healthy_diff/healthy_unstimulated
         disease_ratio = disease_diff/disease_unstimulated
-        
-        # protein_stimulation_ratios_df[count,'cell_type'] = cell_type
-        # protein_stimulation_ratios_df[count,'protein'] = protein
-        # protein_stimulation_ratios_df[count,'stimulant'] = stimulator
-        # protein_stimulation_ratios_df[count,'stimulation_ratio_healthy'] = healthy_ratio
-        # protein_stimulation_ratios_df[count,'stimulation_ratio_disease'] = disease_ratio
-        
+
+        protein_stimulation_ratios_df[count,'cell_type'] = cell_type
+        protein_stimulation_ratios_df[count,'protein'] = prot
+        protein_stimulation_ratios_df[count,'stimulant'] = stimulator
+        protein_stimulation_ratios_df[count,'stimulation_ratio_healthy'] = healthy_ratio
+        protein_stimulation_ratios_df[count,'stimulation_ratio_disease'] = disease_ratio
+
+        #print(c(prot,stimulator,count,healthy_ratio,disease_ratio))
         count <- count + 1
-        print(protein,stimulator,count)
       }
     }
-    #return(protein_stimulation_ratios_df)
+    return(protein_stimulation_ratios_df)
 }
 
+
+
+# trouble shoot
 protein_stimulation_basophils <- proteinDifferentStimulantsPlot(cytof_data,'Basophils')
+# ToDO: check if u got right values from above
+
+
 x <- protein_stimulation_basophils
 x2 <- subset(x,protein=="pSTAT5")
 x3 <- as.matrix(x2[,c('stimulation_ratio_healthy','stimulation_ratio_disease')])
